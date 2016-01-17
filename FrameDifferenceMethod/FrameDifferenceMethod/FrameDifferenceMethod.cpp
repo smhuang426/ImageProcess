@@ -15,7 +15,7 @@ using namespace cv;
 using namespace std;
 
 //our sensitivity value to be used in the absdiff() function
-const static int SENSITIVITY_VALUE = 30;
+const static int SENSITIVITY_VALUE = 55;
 //size of blur used to smooth the intensity image output from absdiff() function
 const static int BLUR_SIZE = 5;
 //we'll have just one object to search for
@@ -57,22 +57,21 @@ void searchForMovement(Mat thresholdImage, Mat &cameraFeed){
         
         //update the objects positions by changing the 'theObject' array values
         theObject[0] = xpos , theObject[1] = ypos;
+        
+        //make some temp x and y variables so we dont have to type out so much
+        int x = theObject[0];
+        int y = theObject[1];
+        
+        //draw some crosshairs around the object
+        circle(cameraFeed,Point(x,y),40,Scalar(0,255,0),7);
+        line(cameraFeed,Point(x,y),Point(x,y-25),Scalar(0,255,0),2);
+        line(cameraFeed,Point(x,y),Point(x,y+25),Scalar(0,255,0),2);
+        line(cameraFeed,Point(x,y),Point(x-25,y),Scalar(0,255,0),2);
+        line(cameraFeed,Point(x,y),Point(x+25,y),Scalar(0,255,0),2);
+        
+        //write the position of the object to the screen
+        putText(cameraFeed,"Tracking object at (" + intToString(x)+","+intToString(y)+")",Point(x,y),1,1,Scalar(255,0,0),2);
     }
-    //make some temp x and y variables so we dont have to type out so much
-    int x = theObject[0];
-    int y = theObject[1];
-    
-    //draw some crosshairs around the object
-    circle(cameraFeed,Point(x,y),20,Scalar(0,255,0),2);
-    line(cameraFeed,Point(x,y),Point(x,y-25),Scalar(0,255,0),2);
-    line(cameraFeed,Point(x,y),Point(x,y+25),Scalar(0,255,0),2);
-    line(cameraFeed,Point(x,y),Point(x-25,y),Scalar(0,255,0),2);
-    line(cameraFeed,Point(x,y),Point(x+25,y),Scalar(0,255,0),2);
-    
-    //write the position of the object to the screen
-    putText(cameraFeed,"Tracking object at (" + intToString(x)+","+intToString(y)+")",Point(x,y),1,1,Scalar(255,0,0),2);
-    
-    
     
 }
 
@@ -111,8 +110,8 @@ int main(){
         cv::threshold(differenceImage,thresholdImage,SENSITIVITY_VALUE,255,THRESH_BINARY);
         if(debugMode==true){
             //show the difference image and threshold image
-            cv::imshow("Difference Image",differenceImage);
-            cv::imshow("Threshold Image", thresholdImage);
+            //cv::imshow("Difference Image",differenceImage);
+            //cv::imshow("Threshold Image", thresholdImage);
         }else{
             //if not in debug mode, destroy the windows so we don't see them anymore
             cv::destroyWindow("Difference Image");
