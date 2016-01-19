@@ -15,7 +15,7 @@ using namespace cv;
 using namespace std;
 
 //our sensitivity value to be used in the absdiff() function
-const static int SENSITIVITY_VALUE = 55;
+const static int SENSITIVITY_VALUE = 30;
 //size of blur used to smooth the intensity image output from absdiff() function
 const static int BLUR_SIZE = 5;
 //we'll have just one object to search for
@@ -81,9 +81,9 @@ int main(){
     bool trackingEnabled = false;
     bool pause = false;
     
-    Mat frame1,frame2;
-    Mat grayImage1,grayImage2;
-    Mat differenceImage;
+    Mat Image,debugImage;;
+    Mat currentMat,prevMat;
+    Mat currentDiff,prevDiff;
     Mat thresholdImage;
     
     VideoCapture capture;
@@ -97,34 +97,38 @@ int main(){
     }
     
     while(1){
+
+        capture.read(Image);
+        Image.copyTo(currentMat);
+        cv::cvtColor(currentMat,currentMat, COLOR_BGR2GRAY);
         
-        capture.read(frame1);
-        cv::cvtColor(frame1,grayImage1,COLOR_BGR2GRAY);
-        
-        capture.read(frame2);
-        cv::cvtColor(frame2,grayImage2,COLOR_BGR2GRAY);
-        
-        cv::absdiff(grayImage1,grayImage2,differenceImage);
-        
-        //threshold intensity image at a given sensitivity
-        cv::threshold(differenceImage,thresholdImage,SENSITIVITY_VALUE,255,THRESH_BINARY);
-        if(debugMode==true){
-            //show the difference image and threshold image
-            //cv::imshow("Difference Image",differenceImage);
-            //cv::imshow("Threshold Image", thresholdImage);
-        }else{
-            //if not in debug mode, destroy the windows so we don't see them anymore
-            cv::destroyWindow("Difference Image");
-            cv::destroyWindow("Threshold Image");
+        if (prevMat.empty())
+        {
+            currentMat.copyTo(prevMat);
+            continue;
         }
         
+        cv::absdiff(currentMat, prevMat, currentDiff);
+        
+        //threshold intensity image at a given sensitivity
+        cv::threshold(currentDiff,currentDiff,SENSITIVITY_VALUE,255,THRESH_BINARY);
+        
         //blur the image to get rid of the noise.
-        cv::blur(thresholdImage,thresholdImage,cv::Size(BLUR_SIZE,BLUR_SIZE));
+        cv::blur(currentDiff,currentDiff,cv::Size(BLUR_SIZE,BLUR_SIZE));
+
         //threshold again to obtain binary image from blur output
-        cv::threshold(thresholdImage,thresholdImage,SENSITIVITY_VALUE,255,THRESH_BINARY);
-        if(debugMode==true){
+        cv::threshold(currentDiff,currentDiff,SENSITIVITY_VALUE,255,THRESH_BINARY);
+
+        if (prevDiff.empty())
+        {
+            currentDiff.copyTo(prevDiff);
+        }
+
+        cv::bitwise_and(currentDiff, prevDiff, thresholdImage);
+        if(debugMode == true){
             //show the threshold image after it's been "blurred"
-            imshow("Final Threshold Image",thresholdImage);
+            flip(thresholdImage, debugImage, 1);
+            imshow("Final Threshold Image",debugImage);
             
         }
         else {
@@ -134,11 +138,15 @@ int main(){
         
         //if tracking enabled, search for contours in our thresholded image
         if(trackingEnabled){
-            searchForMovement(thresholdImage,frame1);
+            searchForMovement(thresholdImage,Image);
         }
         
+        flip(Image, Image, 1);
         //show our captured frame
-        imshow("Frame1",frame1);
+        imshow("Frame1",Image);
+        
+        currentMat.copyTo(prevMat);
+        currentDiff.copyTo(prevDiff);
         
         switch(waitKey(10)){
                 
@@ -161,6 +169,13 @@ int main(){
                     cout<<"Code paused, press 'p' again to resume"<<endl;
                     while (pause == true){
                         //stay in this loop until
+                        if (!currentMat.empty())
+                        {
+                            currentMat.release();
+                            prevMat.release();
+                            currentDiff.release();
+                            prevDiff.release();
+                        }
                         switch (waitKey()){
                                 //a switch statement inside a switch statement? Mindblown.
                             case 112:
